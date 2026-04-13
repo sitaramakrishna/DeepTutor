@@ -14,10 +14,13 @@ Key features:
 from collections.abc import AsyncGenerator
 import json
 import logging
+import time
 
 import aiohttp
 
 from .exceptions import LLMAPIError, LLMConfigError
+from .query_context import get_query_context
+from .telemetry import _log_complete_call, log_stream_call
 from .utils import (
     build_auth_headers,
     build_chat_url,
@@ -28,6 +31,63 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _log_local_query(
+    *,
+    provider_name: str,
+    model: str,
+    messages: list[dict[str, object]],
+    temperature: float,
+    max_tokens: int | None,
+    mode: str,
+) -> None:
+    """Log the query being sent to a local/custom LLM server."""
+    ctx = get_query_context()
+    parts = [f"QUERY | provider={provider_name}", f"model={model}", f"mode={mode}"]
+    if ctx.agent:
+        parts.append(f"agent={ctx.agent}")
+    if ctx.stage:
+        parts.append(f"stage={ctx.stage}")
+    if ctx.capability:
+        parts.append(f"capability={ctx.capability}")
+    parts.append(f"temp={temperature}")
+    if max_tokens is not None:
+        parts.append(f"max_tokens={max_tokens}")
+    parts.append(f"msgs={len(messages)}")
+    logger.info(" ".join(parts))
+
+    for i, msg in enumerate(messages):
+        role = str(msg.get("role", "unknown"))
+        content = msg.get("content", "")
+        content_str = str(content) if not isinstance(content, list) else " ".join(
+            str(b.get("text", "")) if isinstance(b, dict) and b.get("type") == "text" else "[image]"
+            for b in content if isinstance(b, dict)
+        )
+        label = "QUERY.SYSTEM" if role == "system" else (
+            "QUERY.USER" if role == "user" else f"QUERY.MSG[{i}]({role})"
+        )
+        logger.debug("%s | %s", label, content_str)
+
+
+def _extract_usage_from_result(result: dict[str, object]) -> dict[str, int]:
+    """Extract token usage from a local server JSON response."""
+    # OpenAI-compatible format
+    usage_raw = result.get("usage")
+    if isinstance(usage_raw, dict):
+        return {
+            "prompt_tokens": int(usage_raw.get("prompt_tokens", 0) or 0),
+            "completion_tokens": int(usage_raw.get("completion_tokens", 0) or 0),
+            "total_tokens": int(usage_raw.get("total_tokens", 0) or 0),
+        }
+    # Ollama native format (fallback for non-OpenAI-compatible endpoints)
+    prompt_eval = result.get("prompt_eval_count", 0)
+    eval_count = result.get("eval_count", 0)
+    if prompt_eval or eval_count:
+        p = int(prompt_eval or 0)
+        c = int(eval_count or 0)
+        return {"prompt_tokens": p, "completion_tokens": c, "total_tokens": p + c}
+    return {}
 
 
 def _extract_message_from_payload(payload: dict[str, object]) -> str:
@@ -110,17 +170,29 @@ async def complete(
             {"role": "user", "content": prompt},
         ]
 
+    temperature_val = float(kwargs.get("temperature", 0.7))  # type: ignore[arg-type]
+    max_tokens_val: int | None = int(kwargs["max_tokens"]) if kwargs.get("max_tokens") else None  # type: ignore[arg-type]
+
+    _log_local_query(
+        provider_name="local",
+        model=model or "default",
+        messages=msg_list,
+        temperature=temperature_val,
+        max_tokens=max_tokens_val,
+        mode="complete",
+    )
+
     # Build request data
     data = {
         "model": model or "default",
         "messages": msg_list,
-        "temperature": kwargs.get("temperature", 0.7),
+        "temperature": temperature_val,
         "stream": False,
     }
 
     # Add optional parameters
-    if kwargs.get("max_tokens"):
-        data["max_tokens"] = kwargs["max_tokens"]
+    if max_tokens_val is not None:
+        data["max_tokens"] = max_tokens_val
 
     timeout_value = kwargs.get("timeout", DEFAULT_TIMEOUT)
     timeout_seconds = (
@@ -128,6 +200,7 @@ async def complete(
     )
     timeout = aiohttp.ClientTimeout(total=timeout_seconds)
 
+    t0 = time.perf_counter()
     async with aiohttp.ClientSession(timeout=timeout) as session:
         async with session.post(url, json=data, headers=headers) as response:
             if response.status != 200:
@@ -139,6 +212,19 @@ async def complete(
                 )
 
             result = await response.json()
+            elapsed = time.perf_counter() - t0
+
+            usage = _extract_usage_from_result(result)
+            _log_complete_call(
+                provider="local",
+                model=model or "default",
+                usage=usage,
+                cost=0.0,
+                finish_reason=None,
+                elapsed=elapsed,
+                is_stream=False,
+            )
+
             content = _extract_message_from_payload(result)
             content = clean_thinking_tags(content)
             if content:
@@ -194,16 +280,28 @@ async def stream(
             {"role": "user", "content": prompt},
         ]
 
+    temperature_val = float(kwargs.get("temperature", 0.7))  # type: ignore[arg-type]
+    max_tokens_val: int | None = int(kwargs["max_tokens"]) if kwargs.get("max_tokens") else None  # type: ignore[arg-type]
+
+    _log_local_query(
+        provider_name="local",
+        model=model or "default",
+        messages=msg_list,
+        temperature=temperature_val,
+        max_tokens=max_tokens_val,
+        mode="stream",
+    )
+
     # Build request data
     data = {
         "model": model or "default",
         "messages": msg_list,
-        "temperature": kwargs.get("temperature", 0.7),
+        "temperature": temperature_val,
         "stream": True,
     }
 
-    if kwargs.get("max_tokens"):
-        data["max_tokens"] = kwargs["max_tokens"]
+    if max_tokens_val is not None:
+        data["max_tokens"] = max_tokens_val
 
     timeout_value = kwargs.get("timeout", DEFAULT_TIMEOUT)
     timeout_seconds = (
@@ -211,6 +309,8 @@ async def stream(
     )
     timeout = aiohttp.ClientTimeout(total=timeout_seconds)
 
+    stream_usage: dict[str, int] = {}
+    t0 = time.perf_counter()
     try:
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.post(url, json=data, headers=headers) as response:
@@ -242,6 +342,10 @@ async def stream(
 
                         try:
                             chunk_data = json.loads(data_str)
+                            # Capture usage from any chunk that contains it
+                            chunk_usage = _extract_usage_from_result(chunk_data)
+                            if chunk_usage:
+                                stream_usage = chunk_usage
                             content = _extract_message_from_payload(chunk_data)
                             if content:
                                 # Handle thinking tags in streaming
@@ -316,6 +420,15 @@ async def stream(
                 f"Local LLM failed: streaming={e}, non-streaming={e2}",
                 provider="local",
             )
+    finally:
+        elapsed = time.perf_counter() - t0
+        log_stream_call(
+            provider="local",
+            model=model or "default",
+            usage=stream_usage,
+            cost=0.0,
+            elapsed=elapsed,
+        )
 
 
 async def fetch_models(
