@@ -168,6 +168,11 @@ MODEL_OVERRIDES: dict[str, dict[str, object]] = {
     "minimax": {
         "supports_response_format": False,
     },
+    # Claude models accessed via OpenAI-compatible proxy (binding="openai") also
+    # reject json_object — override at model level so the binding check is bypassed.
+    "claude": {
+        "supports_response_format": False,
+    },
     # NOTE: supports_response_format and system_in_messages are binding-level
     # capabilities, NOT model-level. When using OpenRouter or other OpenAI-compatible
     # proxies (binding="openai"), they handle response_format translation and expect
