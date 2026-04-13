@@ -23,6 +23,7 @@ from deeptutor.services.llm import complete as llm_complete
 from deeptutor.services.llm import get_llm_config, get_token_limit_kwargs, supports_response_format
 from deeptutor.services.llm import prepare_multimodal_messages, supports_vision
 from deeptutor.services.llm import stream as llm_stream
+from deeptutor.services.llm.query_context import reset_query_context, set_query_context
 from deeptutor.services.prompt import get_prompt_manager
 
 
@@ -388,6 +389,14 @@ class BaseAgent(ABC):
         max_tokens = max_tokens if max_tokens is not None else self.get_max_tokens()
         max_retries = self.get_max_retries()
 
+        # Publish agent/stage context so executors.py can attach it to query logs.
+        stage_label = stage or self.agent_name
+        _ctx_token = set_query_context(
+            agent=self.agent_name,
+            stage=stage_label,
+            capability=self.module_name,
+        )
+
         # Record call start time
         start_time = time.time()
 
@@ -422,7 +431,6 @@ class BaseAgent(ABC):
             kwargs["messages"] = messages
 
         # Log input
-        stage_label = stage or self.agent_name
         trace_payload_base = {
             "event": "llm_call",
             "state": "running",
@@ -468,6 +476,8 @@ class BaseAgent(ABC):
             )
             self.logger.error(f"LLM call failed: {e}")
             raise
+        finally:
+            reset_query_context(_ctx_token)
 
         # Calculate duration
         call_duration = time.time() - start_time
@@ -541,6 +551,14 @@ class BaseAgent(ABC):
         temperature = temperature if temperature is not None else self.get_temperature()
         max_tokens = max_tokens if max_tokens is not None else self.get_max_tokens()
 
+        # Publish agent/stage context so executors.py can attach it to query logs.
+        stage_label = stage or self.agent_name
+        _ctx_token = set_query_context(
+            agent=self.agent_name,
+            stage=stage_label,
+            capability=self.module_name,
+        )
+
         # Build kwargs
         kwargs = {
             "temperature": temperature,
@@ -571,7 +589,6 @@ class BaseAgent(ABC):
             messages = mm_result.messages
 
         # Log input
-        stage_label = stage or self.agent_name
         trace_payload_base = {
             "event": "llm_call",
             "state": "running",
@@ -662,6 +679,8 @@ class BaseAgent(ABC):
                 }
             )
             self.logger.error(f"LLM streaming failed: {e}")
+        finally:
+            reset_query_context(_ctx_token)
             raise
 
     # -------------------------------------------------------------------------

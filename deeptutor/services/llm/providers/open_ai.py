@@ -9,12 +9,14 @@ from typing import Callable, Protocol, TypeVar, cast
 import httpx
 import openai
 
+import time
+
 from deeptutor.logging import get_logger
 
 from ..config import LLMConfig, get_token_limit_kwargs
 from ..exceptions import LLMConfigError
 from ..registry import register_provider
-from ..telemetry import track_llm_call
+from ..telemetry import log_stream_call, track_llm_call
 from ..types import AsyncStreamGenerator, TutorResponse, TutorStreamChunk
 from .base_provider import BaseLLMProvider
 
@@ -143,6 +145,7 @@ class OpenAIProvider(BaseLLMProvider):
             provider_label = (
                 "azure" if isinstance(self.client, openai.AsyncAzureOpenAI) else "openai"
             )
+            t0 = time.perf_counter()
 
             try:
                 async for chunk in stream:
@@ -158,12 +161,22 @@ class OpenAIProvider(BaseLLMProvider):
                             is_complete=False,
                         )
             finally:
+                elapsed = time.perf_counter() - t0
                 yield TutorStreamChunk(
                     content=accumulated_content,
                     delta="",
                     provider=provider_label,
                     model=model,
                     is_complete=True,
+                )
+                # Token counts are not available in default OpenAI streams.
+                # Pass empty usage; telemetry will note tokens=0.
+                log_stream_call(
+                    provider=provider_label,
+                    model=model,
+                    usage={},
+                    cost=0.0,
+                    elapsed=elapsed,
                 )
 
         return _stream()

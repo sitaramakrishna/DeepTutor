@@ -16,18 +16,19 @@
 [![Feishu](https://img.shields.io/badge/Feishu-Group-00D4AA?style=flat-square&logo=feishu&logoColor=white)](./Communication.md)
 [![WeChat](https://img.shields.io/badge/WeChat-Group-07C160?style=flat-square&logo=wechat&logoColor=white)](https://github.com/HKUDS/DeepTutor/issues/78)
 
-[Features](#-key-features) · [Get Started](#-get-started) · [Explore](#-explore-deeptutor) · [TutorBot](#-tutorbot--persistent-autonomous-ai-tutors) · [CLI](#%EF%B8%8F-deeptutor-cli--agent-native-interface) · [Community](#-community--ecosystem)
+[Features](#-key-features) · [Get Started](#-get-started) · [Explore](#-explore-deeptutor) · [Tools](#-tools--the-reasoning-layer) · [TutorBot](#-tutorbot--persistent-autonomous-ai-tutors) · [CLI](#%EF%B8%8F-deeptutor-cli--agent-native-interface) · [Architecture](#%EF%B8%8F-technical-architecture) · [Observability](#-observability--llm-logging) · [Community](#-community--ecosystem)
 
 [🇨🇳 中文](assets/README/README_CN.md) · [🇯🇵 日本語](assets/README/README_JA.md) · [🇪🇸 Español](assets/README/README_ES.md) · [🇫🇷 Français](assets/README/README_FR.md) · [🇸🇦 العربية](assets/README/README_AR.md) · [🇷🇺 Русский](assets/README/README_RU.md) · [🇮🇳 हिन्दी](assets/README/README_HI.md) · [🇵🇹 Português](assets/README/README_PT.md)
 
 </div>
 
 ---
+
 ### 📰 News
 
-> **[2026.4.4]** Long time no see! ✨ DeepTutor v1.0.0 is finally here — an agent-native evolution featuring a ground-up architecture rewrite, TutorBot, and flexible mode switching under the Apache-2.0 license. A new chapter begins, and our story continues! 
+> **[2026.4.4]** Long time no see! ✨ DeepTutor v1.0.0 is finally here — an agent-native evolution featuring a ground-up architecture rewrite, TutorBot, and flexible mode switching under the Apache-2.0 license. A new chapter begins, and our story continues!
 
-> **[2026.2.6]** 🚀 We've reached 10k stars in just 39 days! A huge thank you to our incredible community for the support! 
+> **[2026.2.6]** 🚀 We've reached 10k stars in just 39 days! A huge thank you to our incredible community for the support!
 
 > **[2026.1.1]** Happy New Year! Join our [Discord](https://discord.gg/eRsjPgMU4t), [WeChat](https://github.com/HKUDS/DeepTutor/issues/78), or [Discussions](https://github.com/HKUDS/DeepTutor/discussions) — let's shape the future of DeepTutor together!
 
@@ -41,11 +42,11 @@
 
 > **[2026.4.10]** [v1.0.0-beta.4](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.4) — Embedding progress tracking with HTTP 429 rate limit retry, cross-platform start tour dependency management, and case-insensitive MIME validation fix.
 
-> **[2026.4.8]** [v1.0.0-beta.3](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.3) — Remove litellm dependency with native OpenAI/Anthropic SDK providers, Windows Math Animator compatibility, robust JSON parsing for LLM outputs, Guided Learning KaTeX & navigation fixes, and full i18n coverage for Chinses.
+> **[2026.4.8]** [v1.0.0-beta.3](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.3) — Remove litellm dependency with native OpenAI/Anthropic SDK providers, Windows Math Animator compatibility, robust JSON parsing for LLM outputs, Guided Learning KaTeX & navigation fixes, and full i18n coverage for Chinese.
 
 > **[2026.4.7]** [v1.0.0-beta.2](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.2) — Runtime cache invalidation for hot settings reload, MinerU nested output support, mimic WebSocket fix, Python 3.11+ minimum, and CI improvements.
 
-> **[2026.4.4]** [v1.0.0-beta.1](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.1) — Agent-native architecture rewrite (～200k lines) with two-layer plugin model (Tools + Capabilities), CLI & SDK entry points, TutorBot multi-channel bot agent, Co-Writer, Guided Learning, and persistent memory.
+> **[2026.4.4]** [v1.0.0-beta.1](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.0-beta.1) — Agent-native architecture rewrite (~200k lines) with two-layer plugin model (Tools + Capabilities), CLI & SDK entry points, TutorBot multi-channel bot agent, Co-Writer, Guided Learning, and persistent memory.
 
 <details>
 <summary><b>Past releases</b></summary>
@@ -64,15 +65,23 @@
 
 </details>
 
+---
+
 ## ✨ Key Features
 
-- **Unified Chat Workspace** — Five modes, one thread. Chat, Deep Solve, Quiz Generation, Deep Research, and Math Animator share the same context — start a conversation, escalate to multi-agent problem solving, generate quizzes, then deep-dive into research, all without losing a single message.
+- **Unified Chat Workspace** — Seven modes, one thread. Chat, Deep Solve, Quiz Generation, Deep Research, Math Animator, Visualize, and Guided Learning share the same context — start a conversation, escalate to multi-agent problem solving, generate quizzes, visualize data, animate math, and deep-dive into research, all without losing a single message.
 - **Personal TutorBots** — Not chatbots — autonomous tutors. Each TutorBot lives in its own workspace with its own memory, personality, and skill set. They set reminders, learn new abilities, and evolve as you grow. Powered by [nanobot](https://github.com/HKUDS/nanobot).
 - **AI Co-Writer** — A Markdown editor where AI is a first-class collaborator. Select text, rewrite, expand, or summarize — drawing from your knowledge base and the web. Every piece feeds back into your learning ecosystem.
 - **Guided Learning** — Turn your materials into structured, visual learning journeys. DeepTutor designs multi-step plans, generates interactive pages for each knowledge point, and lets you discuss alongside each step.
+- **Math Animator** — Turn mathematical concepts into visual animations and storyboards. Five-stage pipeline: concept analysis → scene design → Manim code generation → render → summary. Supports video (.mp4) and image (.png) output modes with automatic retry on render failure.
+- **Data Visualizer** — Generate charts and diagrams from your data or conversation context. Powered by Chart.js and SVG with support for bar, line, pie, scatter, and custom diagram types — rendered inline in your conversation.
+- **Composable Tool Layer** — Six built-in tools (RAG retrieval, web search, code execution, deep reasoning, brainstorming, academic paper search) that work across every mode. Enable exactly the tools you need per turn — no forced bundles.
 - **Knowledge Hub** — Upload PDFs, Markdown, and text files to build RAG-ready knowledge bases. Organize insights across sessions in color-coded notebooks. Your documents don't just sit there — they actively power every conversation.
 - **Persistent Memory** — DeepTutor builds a living profile of you: what you've studied, how you learn, and where you're heading. Shared across all features and TutorBots, it gets sharper with every interaction.
 - **Agent-Native CLI** — Every capability, knowledge base, session, and TutorBot is one command away. Rich terminal output for humans, structured JSON for AI agents and pipelines. Hand DeepTutor a [`SKILL.md`](SKILL.md) and your agents can operate it autonomously.
+- **30+ LLM Providers** — Native OpenAI and Anthropic SDKs plus a routing layer for DashScope, DeepSeek, Gemini, Ollama, Groq, Azure OpenAI, and many more. Switch providers without changing code.
+- **Multi-Language Support** — Interface and responses in English, Chinese (Simplified), Japanese, Spanish, French, Arabic, Russian, Hindi, and Portuguese.
+- **Real-Time Streaming** — WebSocket-based streaming with structured `StreamEvent` frames. Watch thinking, tool calls, progress stages, and final content appear live — no polling required.
 
 ---
 
@@ -341,7 +350,7 @@ These directories survive `docker compose down` and are reused on the next `dock
 | `EMBEDDING_API_KEY` | **Yes** | Embedding API key |
 | `EMBEDDING_HOST` | **Yes** | Embedding endpoint |
 | `EMBEDDING_DIMENSION` | **Yes** | Vector dimension |
-| `SEARCH_PROVIDER` | No | Search provider (`tavily`, `jina`, `serper`, `perplexity`, etc.) |
+| `SEARCH_PROVIDER` | No | Search provider (`tavily`, `jina`, `brave`, `duckduckgo`, `perplexity`, `searxng`) |
 | `SEARCH_API_KEY` | No | Search API key |
 | `BACKEND_PORT` | No | Backend port (default `8001`) |
 | `FRONTEND_PORT` | No | Frontend port (default `3782`) |
@@ -378,15 +387,17 @@ deeptutor kb create my-kb --doc textbook.pdf     # Build a knowledge base
 <img src="assets/figs/dt-chat.png" alt="Chat Workspace" width="800">
 </div>
 
-Five distinct modes coexist in a single workspace, bound by a **unified context management system**. Conversation history, knowledge bases, and references persist across modes — switch between them freely within the same topic, whenever the moment calls for it.
+Seven distinct modes coexist in a single workspace, bound by a **unified context management system**. Conversation history, knowledge bases, and references persist across modes — switch between them freely within the same topic, whenever the moment calls for it.
 
 | Mode | What It Does |
 |:---|:---|
 | **Chat** | Fluid, tool-augmented conversation. Choose from RAG retrieval, web search, code execution, deep reasoning, brainstorming, and paper search — mix and match as needed. |
 | **Deep Solve** | Multi-agent problem solving: plan, investigate, solve, and verify — with precise source citations at every step. |
-| **Quiz Generation** | Generate assessments grounded in your knowledge base, with built-in validation. |
+| **Quiz Generation** | Generate assessments grounded in your knowledge base, with built-in duplicate prevention and validation. |
 | **Deep Research** | Decompose a topic into subtopics, dispatch parallel research agents across RAG, web, and academic papers, and produce a fully cited report. |
-| **Math Animator** | Turn mathematical concepts into visual animations and storyboards powered by Manim. |
+| **Math Animator** | Turn mathematical concepts into visual animations and storyboards powered by Manim. Outputs MP4 video or PNG image sequences. |
+| **Visualize** | Generate charts and diagrams from data or context. Supports bar, line, pie, scatter, and custom SVG — rendered live inside the conversation. |
+| **Guided Learning** | Design a personalized multi-step learning journey from your materials, with interactive HTML pages per knowledge point and contextual Q&A alongside each step. |
 
 Tools are **decoupled from workflows** — in every mode, you decide which tools to enable, how many to use, or whether to use any at all. The workflow orchestrates the reasoning; the tools are yours to compose.
 
@@ -417,6 +428,23 @@ Guided Learning turns your personal materials into structured, multi-step learni
 
 Sessions are persistent — pause, resume, or revisit any step at any time.
 
+### 📊 Math Animator & Visualize — See the Math
+
+**Math Animator** transforms a mathematical concept into a rendered animation through a five-stage pipeline:
+
+```
+User prompt
+  → Concept Analysis   (learning goal, visual targets, narrative steps)
+  → Scene Design       (scene outline, animation notes, code constraints)
+  → Code Generation    (Manim Python code, duration-aware)
+  → Render + Retry     (Manim subprocess, up to 4 auto-repair attempts)
+  → Summary            (plain-language explanation of the animation)
+```
+
+Both **video** (`.mp4`) and **image** (`.png` per scene block) output modes are supported. Requires `pip install 'deeptutor[math-animator]'` (Manim dependency).
+
+**Visualize** generates publication-quality charts and custom SVG diagrams from conversational context or raw data, using Chart.js. All output is rendered inline — no separate tool needed.
+
 ### 📚 Knowledge Management — Your Learning Infrastructure
 
 <div align="center">
@@ -425,7 +453,7 @@ Sessions are persistent — pause, resume, or revisit any step at any time.
 
 Knowledge is where you build and manage the document collections that power everything else in DeepTutor.
 
-- **Knowledge Bases** — Upload PDF, TXT, or Markdown files to create searchable, RAG-ready collections. Add documents incrementally as your library grows.
+- **Knowledge Bases** — Upload PDF, TXT, or Markdown files to create searchable, RAG-ready collections. Add documents incrementally as your library grows. Progress is tracked in real time with rate-limit-aware retry.
 - **Notebooks** — Organize learning records across sessions. Save insights from Chat, Guided Learning, Co-Writer, or Deep Research into categorized, color-coded notebooks.
 
 Your knowledge base is not passive storage — it actively participates in every conversation, every research session, and every learning path you create.
@@ -445,7 +473,24 @@ Memory is shared across all features and all your TutorBots. The more you use De
 
 ---
 
-### 🦞 TutorBot — Persistent, Autonomous AI Tutors
+## 🔧 Tools — The Reasoning Layer
+
+Every capability in DeepTutor is built from a composable set of tools. You control which tools are active per conversation turn. Each tool can be used standalone or in combination.
+
+| Tool | ID | What It Does |
+|:---|:---|:---|
+| **RAG Retrieval** | `rag` | Retrieves semantically relevant passages from your knowledge bases using vector search. Results are ranked and fed to the LLM for grounded answers with source citations. |
+| **Web Search** | `web_search` | Queries your configured search provider (Brave, Tavily, DuckDuckGo, Perplexity, SearXNG, Jina) and returns summarized, cited results. |
+| **Code Execution** | `code_executor` | Runs Python code in an isolated subprocess and returns stdout/stderr. Enables numeric computation, data processing, and verification of generated solutions. |
+| **Deep Reasoning** | `reason` | Dedicates a focused LLM call to structured reasoning — useful for proofs, multi-step derivations, or any problem requiring deliberate logical chains. |
+| **Brainstorming** | `brainstorm` | Generates a broad set of ideas, angles, or approaches to a topic before converging to an answer. Useful for open-ended exploration and creative tasks. |
+| **Paper Search** | `paper_search` | Queries arXiv and academic paper indices for relevant research. Returns abstracts, authors, and citation metadata alongside retrieved passages. |
+
+Tools are **first-class plugins** — the same `BaseTool` interface that powers built-in tools can be used to add custom tools without modifying core code.
+
+---
+
+## 🦞 TutorBot — Persistent, Autonomous AI Tutors
 
 <div align="center">
 <img src="assets/figs/tutorbot-architecture.png" alt="TutorBot Architecture" width="800">
@@ -473,7 +518,7 @@ deeptutor bot list                  # See all your active tutors
 
 ---
 
-### ⌨️ DeepTutor CLI — Agent-Native Interface
+## ⌨️ DeepTutor CLI — Agent-Native Interface
 
 <div align="center">
 <img src="assets/figs/cli-architecture.png" alt="DeepTutor CLI Architecture" width="800">
@@ -490,6 +535,8 @@ deeptutor run chat "Explain the Fourier transform" -t rag --kb textbook
 deeptutor run deep_solve "Prove that √2 is irrational" -t reason
 deeptutor run deep_question "Linear algebra" --config num_questions=5
 deeptutor run deep_research "Attention mechanisms in transformers"
+deeptutor run math_animator "Animate the chain rule"
+deeptutor run visualize "Plot a sine wave from 0 to 2π"
 ```
 
 **Interactive REPL** — A persistent chat session with live mode switching:
@@ -529,7 +576,7 @@ deeptutor session open <id>                         # Resume in REPL
 
 | Command | Description |
 |:---|:---|
-| `deeptutor run <capability> <message>` | Run any capability in a single turn (`chat`, `deep_solve`, `deep_question`, `deep_research`, `math_animator`) |
+| `deeptutor run <capability> <message>` | Run any capability in a single turn (`chat`, `deep_solve`, `deep_question`, `deep_research`, `math_animator`, `visualize`) |
 | `deeptutor chat` | Interactive REPL with optional `--capability`, `--tool`, `--kb`, `--language` |
 | `deeptutor serve` | Start the DeepTutor API server |
 
@@ -592,6 +639,229 @@ deeptutor session open <id>                         # Resume in REPL
 | `deeptutor provider login <provider>` | Provider auth (`openai-codex` OAuth login; `github-copilot` validates an existing Copilot auth session) |
 
 </details>
+
+---
+
+## 🏗️ Technical Architecture
+
+DeepTutor is built on a **two-layer plugin model**: Tools (single-function) and Capabilities (multi-step pipelines). Every feature you see in the UI is a Capability composed of Tools.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Clients: Web (Next.js 16) · CLI (Typer) · SDK              │
+└───────────────────────┬─────────────────────────────────────┘
+                        │  WebSocket (ws://host:8001/api/v1/ws)
+                        │  REST  (http://host:8001/api/v1/*)
+┌───────────────────────▼─────────────────────────────────────┐
+│  FastAPI + Uvicorn (deeptutor/api/)                          │
+│  Routers: chat · knowledge · solve · research · guide ···    │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+┌───────────────────────▼─────────────────────────────────────┐
+│  ChatOrchestrator (deeptutor/runtime/orchestrator.py)        │
+│  CapabilityRegistry → selects correct pipeline               │
+└──────┬────────┬──────────┬────────────┬───────────┬─────────┘
+       │        │          │            │           │
+  chat  deep_solve  deep_research  math_animator  visualize ···
+       │
+┌──────▼────────────────────────────────────────────────────┐
+│  Capability.run(UnifiedContext, StreamBus)                  │
+│  Stages emitted: thinking · tool_call · content · sources  │
+└──────┬────────────────────────────────────────────────────┘
+       │  Tool invocations
+┌──────▼─────────────────────────────────────┐
+│  ToolRegistry                               │
+│  rag · web_search · code_executor           │
+│  reason · brainstorm · paper_search         │
+└──────┬─────────────────────────────────────┘
+       │
+┌──────▼────────────────────────────┐
+│  Services                          │
+│  LLMClient · EmbeddingClient       │
+│  RAGService · SessionStore         │
+│  KnowledgeManager · PromptManager  │
+└───────────────────────────────────┘
+```
+
+### Streaming Architecture
+
+All responses stream over a single WebSocket connection at `/api/v1/ws`. The backend emits typed `StreamEvent` frames:
+
+| Event Type | Meaning |
+|:---|:---|
+| `thinking` | Internal LLM reasoning or intermediate content |
+| `tool_call` | A tool was invoked with these arguments |
+| `observation` | Tool result returned |
+| `content` | Final assistant content chunk |
+| `sources` | Citation list for the response |
+| `progress` | Stage progress update (e.g. "Rendering video...") |
+| `result` | Structured result payload (artifacts, code, charts) |
+| `error` | Error with message and stage |
+| `done` | Turn complete |
+
+### Session & Turn Model
+
+Every conversation is organized into **Sessions** (persistent threads) containing **Turns** (individual request-response cycles). Turns track their full event history, enabling:
+
+- Resume from any point in a session
+- Replay of streaming events for late subscribers
+- Complete audit trail of tool calls and LLM reasoning
+
+Data is stored in SQLite (`data/user/memory/chat_history.db`) with four tables: `sessions`, `messages`, `turns`, `turn_events`.
+
+### Plugin Model
+
+Adding a new **tool** requires implementing `BaseTool` (`deeptutor/core/tool_protocol.py`) and placing it in `deeptutor/tools/`. The `ToolRegistry` discovers it automatically at startup.
+
+Adding a new **capability** requires implementing `BaseCapability` (`deeptutor/core/capability_protocol.py`) and placing it in `deeptutor/capabilities/`. The `CapabilityRegistry` registers it with zero configuration changes elsewhere.
+
+### Tech Stack Summary
+
+| Layer | Technology |
+|:---|:---|
+| Backend | Python 3.11+, FastAPI, Uvicorn |
+| Frontend | Next.js 16, React 19, TypeScript 5 |
+| Styling | Tailwind CSS 3, Framer Motion |
+| Math rendering | KaTeX (rehype-katex) |
+| Markdown | react-markdown + syntax highlighting |
+| Charts | Chart.js 4, Mermaid 11, Cytoscape 3 |
+| Animation | Manim (optional, math_animator only) |
+| Database | SQLite (sessions, turns, events) |
+| RAG | LlamaIndex 0.14+ |
+| LLM | Native OpenAI & Anthropic SDKs + routing layer |
+| Embedding | OpenAI, DashScope, Ollama, Cohere, Jina, SiliconFlow |
+| Web Search | Brave, Tavily, DuckDuckGo, Perplexity, SearXNG, Jina |
+| Container | Docker (multi-stage) + Supervisord |
+| i18n | i18next, react-i18next |
+| Testing | Playwright (E2E), pytest |
+
+---
+
+## 📋 Observability & LLM Logging
+
+DeepTutor instruments every LLM call end-to-end: from the moment an agent or capability fires a request, through the provider SDK, to the final response. All logs land in `data/user/logs/`.
+
+### Log Levels
+
+| Level | Where | What |
+|:---:|:---|:---|
+| **INFO** | Console + file | One summary line per LLM call (model, tokens, cost, latency) |
+| **INFO** | Console + file | One query line per LLM call (provider, agent, stage, capability, temperature) |
+| **DEBUG** | File only | Full system prompt and user prompt content |
+| **WARNING** | Console + file | Failed calls with error type, elapsed time |
+
+### LLM Call Metrics (INFO)
+
+Every completion and streaming call emits a structured single-line log:
+
+```
+LLM | provider=openai model=gpt-4o mode=complete tokens_in=512 tokens_out=128 total=640 cost=$0.001600 latency=1.243s finish=stop
+LLM | provider=anthropic model=claude-3-5-sonnet mode=stream tokens_in=1024 tokens_out=512 total=1536 cost=$0.010800 latency=3.891s finish=stop
+```
+
+Fields: `provider`, `model`, `mode` (complete/stream), `tokens_in`, `tokens_out`, `total`, `cost` (USD), `latency` (seconds), `finish` reason.
+
+### LLM Query Logging (INFO + DEBUG)
+
+Every call also logs which feature triggered it and what was sent:
+
+```
+# INFO — one line per call, always written
+QUERY | provider=openai model=gpt-4o mode=complete agent=main_solver stage=planning capability=deep_solve temp=0.7 max_tokens=4096 msgs=2
+
+# DEBUG — prompt content, written to file only
+QUERY.SYSTEM | You are an expert problem solver. Think step by step and cite your sources.
+QUERY.USER   | Prove that √2 is irrational.
+```
+
+Fields: `provider`, `model`, `mode`, `agent` (which agent made the call), `stage` (pipeline stage), `capability` (feature), `temp`, `max_tokens`, `msgs` (message count).
+
+### Capability → Agent → Stage mapping
+
+Each user action traces to a specific agent and stage in the log:
+
+| User Action | Capability | Agent | Stages logged |
+|:---|:---|:---|:---|
+| Chat message | `chat` | `chat_agent` | `chat` |
+| Deep Solve | `deep_solve` | `main_solver` | `planning`, `reasoning`, `writing` |
+| Quiz Generation | `deep_question` | `question_agent` | `generate`, `validate`, `filter` |
+| Deep Research | `deep_research` | `research_manager` | `decompose`, `research`, `summarize` |
+| Math Animator | `math_animator` | `concept_analysis_agent` → `concept_design_agent` → `code_generator_agent` → `summary_agent` | `concept_analysis`, `concept_design`, `code_generation`, `summary` |
+| Guided Learning | `guide` | `guide_manager` | `design`, `generate_step`, `summarize` |
+| Co-Writer | `co_writer` | `co_writer_agent` | `edit` |
+
+### Error Logging
+
+Failed calls log the provider, function, elapsed time, exception type, and message:
+
+```
+LLM ERROR | provider=openai fn=complete elapsed=5.012s error=LLMRateLimitError: Rate limit exceeded, retry after 20s
+```
+
+### Session Usage Summary
+
+At the end of each pipeline run, per-module token totals are logged:
+
+```
+============================================================
+LLM Usage Summary — deep_solve
+============================================================
+Model        : gpt-4o
+API Calls    : 4
+Tokens       : 8,192  (in=6,144  out=2,048)
+Cost         : $0.035840 USD
+Latency      : 12.847s total / 3.212s avg per call
+============================================================
+```
+
+A global session accumulator aggregates across all modules. Access it programmatically:
+
+```python
+from deeptutor.logging.stats.llm_stats import get_global_stats
+summary = get_global_stats().get_summary()
+# { "calls": 12, "total_tokens": 24576, "cost_usd": 0.12, "avg_latency_seconds": 2.1, ... }
+```
+
+### Grep Cheatsheet
+
+```bash
+# One line per LLM call with full context
+grep "QUERY |" data/user/logs/deeptutor.log
+
+# All system prompts sent to LLM
+grep "QUERY.SYSTEM" data/user/logs/deeptutor.log
+
+# All user prompts sent to LLM
+grep "QUERY.USER" data/user/logs/deeptutor.log
+
+# Timing + token + cost per call
+grep "LLM |" data/user/logs/deeptutor.log
+
+# Failed calls only
+grep "LLM ERROR" data/user/logs/deeptutor.log
+
+# All LLM calls made by a specific feature
+grep "capability=deep_solve" data/user/logs/deeptutor.log
+
+# All calls made by a specific agent
+grep "agent=concept_analysis_agent" data/user/logs/deeptutor.log
+
+# Slow calls (latency > 5s) — requires awk
+awk '/LLM \|/ && /latency=[5-9]/' data/user/logs/deeptutor.log
+```
+
+### Implementation Files
+
+| File | Role |
+|:---|:---|
+| `deeptutor/services/llm/telemetry.py` | `track_llm_call` decorator + `log_stream_call()` — fires after every completion |
+| `deeptutor/services/llm/executors.py` | `_log_query()` — logs full message array before each API call |
+| `deeptutor/services/llm/query_context.py` | `ContextVar` carrying agent/stage/capability into the executor layer |
+| `deeptutor/agents/base_agent.py` | Sets query context in `call_llm()` / `stream_llm()`, resets in `finally` |
+| `deeptutor/logging/stats/llm_stats.py` | Per-module + global token/cost/latency accumulator |
+| `deeptutor/logging/logger.py` | Unified logger with `llm_call()`, `log_llm_input()`, `log_llm_output()` |
+
+---
 
 ## 🗺️ Roadmap
 
