@@ -13,9 +13,70 @@ from deeptutor.logging import get_logger
 from deeptutor.services.llm.provider_registry import find_by_name, strip_provider_prefix
 
 from .config import get_token_limit_kwargs
+from .query_context import get_query_context
 from .utils import extract_response_content
 
 logger = get_logger("LLMExecutors")
+
+
+def _log_query(
+    *,
+    provider_name: str,
+    model: str,
+    messages: list[dict[str, object]],
+    temperature: float,
+    max_tokens: int,
+    mode: str,
+) -> None:
+    """
+    Log the full LLM query before it is sent to the API.
+
+    Summary line at INFO — one line per call, grep-friendly:
+        QUERY | agent=X stage=Y model=Z provider=P mode=complete temp=0.7 max_tokens=4096 msgs=2
+
+    Content lines at DEBUG (written to log file, not console):
+        QUERY.SYSTEM | <system prompt content>
+        QUERY.USER   | <user prompt content>
+        QUERY.MSG[n] | role=<role> content=<content>  (for multi-turn messages)
+    """
+    ctx = get_query_context()
+
+    # --- INFO summary line ---------------------------------------------------
+    parts = [f"QUERY | provider={provider_name}", f"model={model}", f"mode={mode}"]
+    if ctx.agent:
+        parts.append(f"agent={ctx.agent}")
+    if ctx.stage:
+        parts.append(f"stage={ctx.stage}")
+    if ctx.capability:
+        parts.append(f"capability={ctx.capability}")
+    parts.append(f"temp={temperature}")
+    parts.append(f"max_tokens={max_tokens}")
+    parts.append(f"msgs={len(messages)}")
+    logger.info(" ".join(parts))
+
+    # --- DEBUG content lines -------------------------------------------------
+    for i, msg in enumerate(messages):
+        role = str(msg.get("role", "unknown"))
+        content = msg.get("content", "")
+
+        # content can be a string or a list (multimodal)
+        if isinstance(content, list):
+            # Multimodal: extract text parts, note image parts
+            text_parts = []
+            for block in content:
+                if isinstance(block, dict):
+                    if block.get("type") == "text":
+                        text_parts.append(str(block.get("text", "")))
+                    elif block.get("type") == "image_url":
+                        text_parts.append("[image]")
+            content_str = " ".join(text_parts)
+        else:
+            content_str = str(content)
+
+        label = "QUERY.SYSTEM" if role == "system" else (
+            "QUERY.USER" if role == "user" else f"QUERY.MSG[{i}]({role})"
+        )
+        logger.debug("%s | %s", label, content_str)
 
 
 def _build_messages(
@@ -95,13 +156,24 @@ async def sdk_complete(
     max_tokens_val = int(kwargs.pop("max_tokens", 4096))
     temperature_val = float(kwargs.pop("temperature", 0.7))
 
+    built_messages = _build_messages(
+        prompt=prompt,
+        system_prompt=system_prompt,
+        messages=messages,
+    )
+
+    _log_query(
+        provider_name=provider_name,
+        model=resolved_model,
+        messages=built_messages,
+        temperature=temperature_val,
+        max_tokens=max_tokens_val,
+        mode="complete",
+    )
+
     payload: dict[str, Any] = {
         "model": resolved_model,
-        "messages": _build_messages(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            messages=messages,
-        ),
+        "messages": built_messages,
         "temperature": temperature_val,
     }
 
@@ -156,13 +228,24 @@ async def sdk_stream(
     max_tokens_val = int(kwargs.pop("max_tokens", 4096))
     temperature_val = float(kwargs.pop("temperature", 0.7))
 
+    built_messages = _build_messages(
+        prompt=prompt,
+        system_prompt=system_prompt,
+        messages=messages,
+    )
+
+    _log_query(
+        provider_name=provider_name,
+        model=resolved_model,
+        messages=built_messages,
+        temperature=temperature_val,
+        max_tokens=max_tokens_val,
+        mode="stream",
+    )
+
     payload: dict[str, Any] = {
         "model": resolved_model,
-        "messages": _build_messages(
-            prompt=prompt,
-            system_prompt=system_prompt,
-            messages=messages,
-        ),
+        "messages": built_messages,
         "temperature": temperature_val,
         "stream": True,
     }

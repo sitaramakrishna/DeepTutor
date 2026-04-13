@@ -4,6 +4,7 @@ Anthropic LLM provider implementation.
 
 import asyncio
 from collections.abc import AsyncIterator
+import time
 from typing import Callable, Protocol, TypeVar, cast
 
 import anthropic
@@ -11,7 +12,7 @@ import anthropic
 from ..config import LLMConfig
 from ..http_client import get_shared_http_client
 from ..registry import register_provider
-from ..telemetry import track_llm_call
+from ..telemetry import log_stream_call, track_llm_call
 from ..types import AsyncStreamGenerator, TutorResponse, TutorStreamChunk
 from .base_provider import BaseLLMProvider
 
@@ -226,7 +227,8 @@ class AnthropicProvider(BaseLLMProvider):
         async def _stream() -> AsyncStreamGenerator:
             stream = cast(AnthropicStream, await self.execute_with_retry(_create_stream))
             accumulated_content = ""
-            usage = None
+            usage: dict[str, int] | None = None
+            t0 = time.perf_counter()
 
             async for chunk in stream:
                 if chunk.type == "content_block_delta" and chunk.delta.text:
@@ -246,6 +248,7 @@ class AnthropicProvider(BaseLLMProvider):
                         "output_tokens": chunk.usage.output_tokens,
                     }
 
+            elapsed = time.perf_counter() - t0
             yield TutorStreamChunk(
                 content=accumulated_content,
                 delta="",
@@ -253,6 +256,13 @@ class AnthropicProvider(BaseLLMProvider):
                 model=model,
                 is_complete=True,
                 usage=usage,
+            )
+            log_stream_call(
+                provider="anthropic",
+                model=model,
+                usage=usage or {},
+                cost=0.0,
+                elapsed=elapsed,
             )
 
         return _stream()
