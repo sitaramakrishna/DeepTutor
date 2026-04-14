@@ -36,6 +36,8 @@
 
 ### 📦 Releases
 
+> **[2026.4.14]** Comprehensive LLM observability: `QUERY |` log lines with agent/stage context for every LLM call (including Ollama and local servers), `LLM |` metrics lines with token counts, latency, and cost. Fix `response_format` errors for Claude and OpenAI reasoning models (`o3`, `o4-mini`, etc.) used via OpenAI-compatible proxy — these models now correctly skip `json_object` and rely on prompt-based JSON extraction.
+
 > **[2026.4.11]** [v1.0.2](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.2) — Search consolidation simplification with SearXNG fallback, provider switch fix, explicit runtime config in test runner, and frontend resource leak fixes.
 
 > **[2026.4.10]** [v1.0.1](https://github.com/HKUDS/DeepTutor/releases/tag/v1.0.1) — New Visualize capability with Chart.js/SVG rendering pipeline, quiz duplicate prevention with generation history, o4-mini model support, and server logging improvements.
@@ -103,12 +105,31 @@ conda create -n deeptutor python=3.11 && conda activate deeptutor
 python scripts/start_tour.py
 ```
 
-The tour asks how you'd like to use DeepTutor:
+The tour auto-detects your platform (conda/venv/system Python, brew/apt/winget Node.js) and asks how you'd like to use DeepTutor. If a previous run was interrupted, it offers to resume where it left off.
 
-- **Web mode** (recommended) — Picks a dependency profile, installs everything (pip + npm), then spins up a temporary server and opens the **Settings** page in your browser. A four-step guided tour walks you through LLM, Embedding, and Search provider setup with live connection testing. Once complete, DeepTutor restarts automatically with your configuration.
-- **CLI mode** — A fully interactive terminal flow: choose a dependency profile, install dependencies, configure providers, verify connections, and apply — all without leaving the shell.
+**Web mode** (recommended) — 4 steps, browser-based configuration:
+
+| Step | What Happens |
+|:---|:---|
+| 1. Install profile | Choose `web-basic` (FastAPI + Next.js) or `web-rag` (+ LlamaIndex RAG) |
+| 2. Ports | Set backend and frontend ports (defaults: `8001` / `3782`) |
+| 3. Dependencies | Installs Python packages via pip, npm packages, and optionally Manim for Math Animator. Installs Node.js automatically if missing (brew/apt/winget). |
+| 4. Configure in browser | Spins up a temporary server, opens `localhost:<port>/settings?tour=true`. Configure LLM, Embedding, and Search providers with live connection testing. Click **Complete & Launch** — the tour shuts down the temp server and relaunches DeepTutor with your config. |
+
+**CLI mode** — 6 steps, fully terminal-based:
+
+| Step | What Happens |
+|:---|:---|
+| 1. Install profile | Choose `cli-core` (minimal, ~80 MB) or `cli-rag` (+ LlamaIndex RAG) |
+| 2. Ports | Set the backend port |
+| 3. Dependencies | Installs Python packages |
+| 4. Configure providers | Interactive prompts for LLM (binding, base URL, API key, model ID), Embedding, and optionally Search |
+| 5. Verify connections | Live streaming test against each configured endpoint — both LLM and Embedding must pass |
+| 6. Review & apply | Displays a summary, then writes `model_catalog.json` and `.env` |
 
 Either way, you end up with a running DeepTutor at [http://localhost:3782](http://localhost:3782).
+
+> To restart the server after configuration changes, run `python deeptutor/api/run_server.py` (backend) and `cd web && npm run dev` (frontend) in separate terminals.
 
 ### Option B — Manual Local Install
 
