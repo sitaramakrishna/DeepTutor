@@ -71,19 +71,21 @@
 
 ## ✨ Key Features
 
-- **Unified Chat Workspace** — Seven modes, one thread. Chat, Deep Solve, Quiz Generation, Deep Research, Math Animator, Visualize, and Guided Learning share the same context — start a conversation, escalate to multi-agent problem solving, generate quizzes, visualize data, animate math, and deep-dive into research, all without losing a single message.
-- **Personal TutorBots** — Not chatbots — autonomous tutors. Each TutorBot lives in its own workspace with its own memory, personality, and skill set. They set reminders, learn new abilities, and evolve as you grow. Powered by [nanobot](https://github.com/HKUDS/nanobot).
+- **Unified Chat Workspace** — Eight modes, one thread. Chat, Deep Solve, Quiz Generation, Deep Research, Math Animator, Visualize, Guided Learning, and Vision Solver share the same context — start a conversation, escalate to multi-agent problem solving, generate quizzes, visualize data, animate math, and deep-dive into research, all without losing a single message.
+- **Personal TutorBots** — Not chatbots — autonomous tutors. Each TutorBot lives in its own workspace with its own memory, personality, and skill set. They set reminders, learn new abilities, and evolve as you grow. Connect over 11 channels: Telegram, WhatsApp, Discord, Slack, Feishu, WeChat Work, DingTalk, Matrix, Email, QQ, and MoChat. Powered by [nanobot](https://github.com/HKUDS/nanobot).
 - **AI Co-Writer** — A Markdown editor where AI is a first-class collaborator. Select text, rewrite, expand, or summarize — drawing from your knowledge base and the web. Every piece feeds back into your learning ecosystem.
-- **Guided Learning** — Turn your materials into structured, visual learning journeys. DeepTutor designs multi-step plans, generates interactive pages for each knowledge point, and lets you discuss alongside each step.
+- **Guided Learning** — Turn your materials into structured, visual learning journeys. DeepTutor designs multi-step plans, generates interactive HTML pages for each knowledge point, and lets you discuss alongside each step.
 - **Math Animator** — Turn mathematical concepts into visual animations and storyboards. Five-stage pipeline: concept analysis → scene design → Manim code generation → render → summary. Supports video (.mp4) and image (.png) output modes with automatic retry on render failure.
 - **Data Visualizer** — Generate charts and diagrams from your data or conversation context. Powered by Chart.js and SVG with support for bar, line, pie, scatter, and custom diagram types — rendered inline in your conversation.
-- **Composable Tool Layer** — Six built-in tools (RAG retrieval, web search, code execution, deep reasoning, brainstorming, academic paper search) that work across every mode. Enable exactly the tools you need per turn — no forced bundles.
-- **Knowledge Hub** — Upload PDFs, Markdown, and text files to build RAG-ready knowledge bases. Organize insights across sessions in color-coded notebooks. Your documents don't just sit there — they actively power every conversation.
-- **Persistent Memory** — DeepTutor builds a living profile of you: what you've studied, how you learn, and where you're heading. Shared across all features and TutorBots, it gets sharper with every interaction.
+- **Vision Solver** — Analyze math problem images and generate GeoGebra visualizations. Upload an image with a question; DeepTutor extracts geometry, parses coordinate systems, validates GeoGebra commands, and returns an interactive visualization.
+- **Composable Tool Layer** — Seven built-in tools (RAG retrieval, web search, sandboxed code execution, deep reasoning, brainstorming, academic paper search, vision parsing) that work across every mode. Enable exactly the tools you need per turn — no forced bundles.
+- **Knowledge Hub** — Upload PDFs, Markdown, and text files to build RAG-ready knowledge bases. Multi-format pipeline: parse → chunk → embed → index. Organize insights across sessions in color-coded notebooks. Your documents don't just sit there — they actively power every conversation.
+- **Persistent Memory** — DeepTutor builds a living profile of you: what you've studied, how you learn, and where you're heading. Two-layer memory (PROFILE.md + SUMMARY.md) shared across all features and TutorBots, getting sharper with every interaction.
 - **Agent-Native CLI** — Every capability, knowledge base, session, and TutorBot is one command away. Rich terminal output for humans, structured JSON for AI agents and pipelines. Hand DeepTutor a [`SKILL.md`](SKILL.md) and your agents can operate it autonomously.
-- **30+ LLM Providers** — Native OpenAI and Anthropic SDKs plus a routing layer for DashScope, DeepSeek, Gemini, Ollama, Groq, Azure OpenAI, and many more. Switch providers without changing code.
+- **30+ LLM Providers** — Native OpenAI and Anthropic SDKs plus a routing layer for DashScope, DeepSeek, Gemini, Ollama, Groq, Azure OpenAI, and many more. Per-model capability flags: vision, JSON mode, prompt caching, reasoning (o1/o3/o4), temperature overrides. Switch providers without changing code.
 - **Multi-Language Support** — Interface and responses in English, Chinese (Simplified), Japanese, Spanish, French, Arabic, Russian, Hindi, and Portuguese.
 - **Real-Time Streaming** — WebSocket-based streaming with structured `StreamEvent` frames. Watch thinking, tool calls, progress stages, and final content appear live — no polling required.
+- **Full Observability** — Every LLM call logs provider, model, tokens, cost, and latency. Query context traces each call back to the exact agent, stage, and capability that triggered it.
 
 ---
 
@@ -412,13 +414,14 @@ Seven distinct modes coexist in a single workspace, bound by a **unified context
 
 | Mode | What It Does |
 |:---|:---|
-| **Chat** | Fluid, tool-augmented conversation. Choose from RAG retrieval, web search, code execution, deep reasoning, brainstorming, and paper search — mix and match as needed. |
-| **Deep Solve** | Multi-agent problem solving: plan, investigate, solve, and verify — with precise source citations at every step. |
-| **Quiz Generation** | Generate assessments grounded in your knowledge base, with built-in duplicate prevention and validation. |
-| **Deep Research** | Decompose a topic into subtopics, dispatch parallel research agents across RAG, web, and academic papers, and produce a fully cited report. |
-| **Math Animator** | Turn mathematical concepts into visual animations and storyboards powered by Manim. Outputs MP4 video or PNG image sequences. |
-| **Visualize** | Generate charts and diagrams from data or context. Supports bar, line, pie, scatter, and custom SVG — rendered live inside the conversation. |
-| **Guided Learning** | Design a personalized multi-step learning journey from your materials, with interactive HTML pages per knowledge point and contextual Q&A alongside each step. |
+| **Chat** | Fluid, tool-augmented conversation. Choose from RAG retrieval, web search, code execution, deep reasoning, brainstorming, and paper search — mix and match as needed. Multi-turn with token-aware history truncation. |
+| **Deep Solve** | Multi-agent problem solving: plan → decompose → solve → verify — with precise source citations at every step. |
+| **Quiz Generation** | Generate assessments grounded in your knowledge base using a two-stage pipeline: idea generation (batched templates) → question generation (QA pairs). Built-in duplicate prevention via generation history. |
+| **Deep Research** | Decompose a topic into subtopics, dispatch parallel research agents across RAG, web, and academic papers, and produce a fully cited report with `CitationManager`. Supports pre-confirmed outlines to skip decomposition. |
+| **Math Animator** | Turn mathematical concepts into visual animations powered by Manim. Five-stage pipeline: concept analysis → scene design → code generation → render + retry → summary. Outputs MP4 video or PNG image sequences. |
+| **Visualize** | Generate charts and diagrams from data or context. Supports bar, line, pie, scatter, and custom SVG via Chart.js — rendered live inside the conversation. |
+| **Guided Learning** | Design a personalized multi-step learning journey from your materials. Each knowledge point gets an interactive HTML page with explanations, diagrams, and contextual Q&A. Sessions persist across pause/resume. |
+| **Vision Solver** | Analyze math problem images and generate GeoGebra visualizations. Pipeline: image upload → coordinate extraction → GeoGebra command generation → validation → interactive output. |
 
 Tools are **decoupled from workflows** — in every mode, you decide which tools to enable, how many to use, or whether to use any at all. The workflow orchestrates the reasoning; the tools are yours to compose.
 
@@ -479,6 +482,20 @@ Knowledge is where you build and manage the document collections that power ever
 
 Your knowledge base is not passive storage — it actively participates in every conversation, every research session, and every learning path you create.
 
+#### RAG Pipeline
+
+Documents go through a five-stage processing pipeline:
+
+| Stage | What Happens |
+|:---|:---|
+| **Parse** | Format-specific parser extracts clean text (PDF, Markdown, TXT, academic papers via MinerU) |
+| **Chunk** | Text split into semantic units with configurable overlap. Numbered-item chunker preserves list structure. |
+| **Embed** | Each chunk converted to a vector via your embedding model (OpenAI, DashScope, Ollama, SiliconFlow, etc.) |
+| **Index** | Vectors stored in a vector database for fast nearest-neighbor retrieval |
+| **Retrieve** | Hybrid search (dense vector + keyword) with optional reranking returns top-K results with source metadata |
+
+Supported document formats: `.pdf`, `.md`, `.txt`. Academic papers parsed via MinerU for structured extraction including equations, tables, and figures.
+
 ### 🧠 Memory — DeepTutor Learns As You Learn
 
 <div align="center">
@@ -500,12 +517,13 @@ Every capability in DeepTutor is built from a composable set of tools. You contr
 
 | Tool | ID | What It Does |
 |:---|:---|:---|
-| **RAG Retrieval** | `rag` | Retrieves semantically relevant passages from your knowledge bases using vector search. Results are ranked and fed to the LLM for grounded answers with source citations. |
-| **Web Search** | `web_search` | Queries your configured search provider (Brave, Tavily, DuckDuckGo, Perplexity, SearXNG, Jina) and returns summarized, cited results. |
-| **Code Execution** | `code_executor` | Runs Python code in an isolated subprocess and returns stdout/stderr. Enables numeric computation, data processing, and verification of generated solutions. |
-| **Deep Reasoning** | `reason` | Dedicates a focused LLM call to structured reasoning — useful for proofs, multi-step derivations, or any problem requiring deliberate logical chains. |
-| **Brainstorming** | `brainstorm` | Generates a broad set of ideas, angles, or approaches to a topic before converging to an answer. Useful for open-ended exploration and creative tasks. |
+| **RAG Retrieval** | `rag` | Retrieves semantically relevant passages from your knowledge bases using hybrid vector + keyword search. Results are ranked and fed to the LLM for grounded answers with source citations. |
+| **Web Search** | `web_search` | Queries your configured search provider (Brave, Tavily, DuckDuckGo, Perplexity, SearXNG, Jina) and returns summarized, cited results with answer consolidation across providers. |
+| **Code Execution** | `code_executor` | Runs Python code in a sandboxed subprocess. Allowed: math, numpy, pandas, matplotlib, scipy, sympy, json, datetime, re, collections. Blocked: os, sys, subprocess, socket, open, exec, eval, importlib. Artifacts (code.py, output.log) persisted per task run. |
+| **Deep Reasoning** | `reason` | Dedicates a focused LLM call to structured step-by-step reasoning — useful for proofs, multi-step derivations, or any problem requiring deliberate logical chains without external tool calls. |
+| **Brainstorming** | `brainstorm` | Generates 5–8 distinct directions, angles, or approaches on a topic before converging. Each direction includes a justification. Useful for open-ended exploration and creative tasks. |
 | **Paper Search** | `paper_search` | Queries arXiv and academic paper indices for relevant research. Returns abstracts, authors, and citation metadata alongside retrieved passages. |
+| **Vision Tools** | `vision` | Block parser for GeoGebra extraction from images, coordinate transform (image → GeoGebra coordinate space), GeoGebra command validator, and image preprocessing utilities. Used internally by Vision Solver. |
 
 Tools are **first-class plugins** — the same `BaseTool` interface that powers built-in tools can be used to add custom tools without modifying core code.
 
@@ -524,12 +542,27 @@ TutorBot is not a chatbot — it is a **persistent, multi-instance agent** built
 </div>
 
 - **Soul Templates** — Define your tutor's personality, tone, and teaching philosophy through editable Soul files. Choose from built-in archetypes (Socratic, encouraging, rigorous) or craft your own — the soul shapes every response.
-- **Independent Workspace** — Each bot has its own directory with separate memory, sessions, skills, and configuration — fully isolated yet able to access DeepTutor's shared knowledge layer.
-- **Proactive Heartbeat** — Bots don't just respond — they initiate. The built-in Heartbeat system enables recurring study check-ins, review reminders, and scheduled tasks. Your tutor shows up even when you don't.
+- **Independent Workspace** — Each bot has its own directory with separate memory (PROFILE.md + SUMMARY.md), sessions, skills, and configuration — fully isolated yet able to access DeepTutor's shared knowledge layer.
+- **Proactive Heartbeat** — Bots don't just respond — they initiate. The built-in `HeartbeatService` enables recurring study check-ins, review reminders, and scheduled tasks. A `CronService` handles persistent background scheduling. Your tutor shows up even when you don't.
 - **Full Tool Access** — Every bot reaches into DeepTutor's complete toolkit: RAG retrieval, code execution, web search, academic paper search, deep reasoning, and brainstorming.
 - **Skill Learning** — Teach your bot new abilities by adding skill files to its workspace. As your needs evolve, so does your tutor's capability.
-- **Multi-Channel Presence** — Connect bots to Telegram, Discord, Slack, Feishu, WeChat Work, DingTalk, Email, and more. Your tutor meets you wherever you are.
-- **Team & Sub-Agents** — Spawn background sub-agents or orchestrate multi-agent teams within a single bot for complex, long-running tasks.
+- **11 Communication Channels** — Connect your tutor to any platform via the `ChannelManager`:
+
+  | Channel | Notes |
+  |:---|:---|
+  | Telegram | Full message routing with allow-from validation |
+  | WhatsApp | Direct messaging |
+  | Discord | Server and DM support |
+  | Slack | Workspace messaging |
+  | Feishu (Lark) | Comprehensive enterprise integration |
+  | WeChat Work (WeCom) | Enterprise WeChat |
+  | DingTalk | Alibaba enterprise platform |
+  | Matrix | Decentralized open protocol |
+  | MoChat | Chinese enterprise chat |
+  | Email | SMTP/IMAP integration |
+  | QQ | Tencent QQ messaging |
+
+- **Team & Sub-Agents** — Spawn background sub-agents or orchestrate multi-agent teams with shared state (`Board`), async message passing (`Mailbox`), and max 40 iterations per turn (configurable up to 65,536 token context).
 
 ```bash
 deeptutor bot create math-tutor --persona "Socratic math teacher who uses probing questions"
