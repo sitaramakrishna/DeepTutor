@@ -168,22 +168,35 @@ MODEL_OVERRIDES: dict[str, dict[str, object]] = {
     "minimax": {
         "supports_response_format": False,
     },
+    # Claude models accessed via OpenAI-compatible proxy (binding="openai") also
+    # reject json_object — override at model level so the binding check is bypassed.
+    "claude": {
+        "supports_response_format": False,
+    },
     # NOTE: supports_response_format and system_in_messages are binding-level
     # capabilities, NOT model-level. When using OpenRouter or other OpenAI-compatible
     # proxies (binding="openai"), they handle response_format translation and expect
     # system prompts in messages. The native Anthropic limitations are already
     # handled by PROVIDER_CAPABILITIES["anthropic"] / ["claude"] above.
     # Only model-intrinsic capabilities (like has_thinking_tags) belong here.
-    # Reasoning models - only support temperature=1.0
+    # Reasoning models - only support temperature=1.0 and do NOT accept
+    # response_format={"type":"json_object"} — they require json_schema or nothing.
     # See: https://github.com/HKUDS/DeepTutor/issues/141
     "gpt-5": {
         "forced_temperature": 1.0,
+        "supports_response_format": False,
     },
     "o1": {
         "forced_temperature": 1.0,
+        "supports_response_format": False,
     },
     "o3": {
         "forced_temperature": 1.0,
+        "supports_response_format": False,
+    },
+    "o4": {
+        "forced_temperature": 1.0,
+        "supports_response_format": False,
     },
     # Vision-capable model families
     "gpt-4o": {"supports_vision": True},

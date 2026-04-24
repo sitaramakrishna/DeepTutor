@@ -9,11 +9,14 @@ from typing import Any
 
 from openai import AsyncOpenAI
 
+import time
+
 from deeptutor.logging import get_logger
 from deeptutor.services.llm.provider_registry import find_by_name, strip_provider_prefix
 
 from .config import get_token_limit_kwargs
 from .query_context import get_query_context
+from .telemetry import _log_complete_call, log_stream_call
 from .utils import extract_response_content
 
 logger = get_logger("LLMExecutors")
@@ -184,8 +187,35 @@ async def sdk_complete(
         payload["reasoning_effort"] = reasoning_effort
     payload.update(kwargs)
 
+    t0 = time.perf_counter()
     response = await client.chat.completions.create(**payload)
+    elapsed = time.perf_counter() - t0
+
+    # Extract usage — Ollama and most OpenAI-compatible servers return this.
+    raw_usage = getattr(response, "usage", None)
+    usage: dict[str, int] = {}
+    if raw_usage is not None:
+        usage = {
+            "prompt_tokens": getattr(raw_usage, "prompt_tokens", 0) or 0,
+            "completion_tokens": getattr(raw_usage, "completion_tokens", 0) or 0,
+            "total_tokens": getattr(raw_usage, "total_tokens", 0) or 0,
+        }
+
     choices = getattr(response, "choices", None) or []
+    finish_reason: str | None = None
+    if choices:
+        finish_reason = getattr(choices[0], "finish_reason", None)
+
+    _log_complete_call(
+        provider=provider_name,
+        model=resolved_model,
+        usage=usage,
+        cost=0.0,
+        finish_reason=finish_reason,
+        elapsed=elapsed,
+        is_stream=False,
+    )
+
     if not choices:
         return ""
     message = getattr(choices[0], "message", None)
@@ -258,19 +288,41 @@ async def sdk_stream(
     payload.update(kwargs)
 
     stream_response = await client.chat.completions.create(**payload)
-    async for chunk in stream_response:
-        choices = getattr(chunk, "choices", None) or []
-        if not choices:
-            continue
-        choice = choices[0]
-        delta = getattr(choice, "delta", None)
-        if delta is None and isinstance(choice, dict):
-            delta = choice.get("delta")
-        if delta is None:
-            continue
-        raw_content = getattr(delta, "content", None) if not isinstance(delta, dict) else delta.get("content")
-        if raw_content is None:
-            continue
-        content = extract_response_content(delta)
-        if content:
-            yield content
+    t0 = time.perf_counter()
+    stream_usage: dict[str, int] = {}
+
+    try:
+        async for chunk in stream_response:
+            choices = getattr(chunk, "choices", None) or []
+            if not choices:
+                # Some servers (e.g. Ollama with stream_options) emit a final
+                # chunk with usage and no choices — capture it.
+                raw_usage = getattr(chunk, "usage", None)
+                if raw_usage is not None:
+                    stream_usage = {
+                        "prompt_tokens": getattr(raw_usage, "prompt_tokens", 0) or 0,
+                        "completion_tokens": getattr(raw_usage, "completion_tokens", 0) or 0,
+                        "total_tokens": getattr(raw_usage, "total_tokens", 0) or 0,
+                    }
+                continue
+            choice = choices[0]
+            delta = getattr(choice, "delta", None)
+            if delta is None and isinstance(choice, dict):
+                delta = choice.get("delta")
+            if delta is None:
+                continue
+            raw_content = getattr(delta, "content", None) if not isinstance(delta, dict) else delta.get("content")
+            if raw_content is None:
+                continue
+            content = extract_response_content(delta)
+            if content:
+                yield content
+    finally:
+        elapsed = time.perf_counter() - t0
+        log_stream_call(
+            provider=provider_name,
+            model=resolved_model,
+            usage=stream_usage,
+            cost=0.0,
+            elapsed=elapsed,
+        )
