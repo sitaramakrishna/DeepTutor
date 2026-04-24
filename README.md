@@ -16,7 +16,7 @@
 [![Feishu](https://img.shields.io/badge/Feishu-Group-00D4AA?style=flat-square&logo=feishu&logoColor=white)](./Communication.md)
 [![WeChat](https://img.shields.io/badge/WeChat-Group-07C160?style=flat-square&logo=wechat&logoColor=white)](https://github.com/HKUDS/DeepTutor/issues/78)
 
-[Features](#-key-features) · [Get Started](#-get-started) · [Explore](#-explore-deeptutor) · [Tools](#-tools--the-reasoning-layer) · [TutorBot](#-tutorbot--persistent-autonomous-ai-tutors) · [CLI](#%EF%B8%8F-deeptutor-cli--agent-native-interface) · [Architecture](#%EF%B8%8F-technical-architecture) · [Observability](#-observability--llm-logging) · [Community](#-community--ecosystem)
+[For Toddlers](#-for-toddlers--direct-learning-experiences) · [For Parents](#-for-parents--caregivers----setup-monitoring-and-content) · [For Educators](#-for-educators----curriculum-design--research) · [Get Started](#-get-started) · [Explore](#-explore-deeptutor) · [Tools](#-tools--the-reasoning-layer) · [TutorBot](#-tutorbot--persistent-autonomous-ai-tutors) · [CLI](#%EF%B8%8F-deeptutor-cli--agent-native-interface) · [Architecture](#%EF%B8%8F-technical-architecture) · [Observability](#-observability--llm-logging) · [Community](#-community--ecosystem)
 
 [🇨🇳 中文](assets/README/README_CN.md) · [🇯🇵 日本語](assets/README/README_JA.md) · [🇪🇸 Español](assets/README/README_ES.md) · [🇫🇷 Français](assets/README/README_FR.md) · [🇸🇦 العربية](assets/README/README_AR.md) · [🇷🇺 Русский](assets/README/README_RU.md) · [🇮🇳 हिन्दी](assets/README/README_HI.md) · [🇵🇹 Português](assets/README/README_PT.md)
 
@@ -71,21 +71,44 @@
 
 ## ✨ Key Features
 
-- **Unified Chat Workspace** — Eight modes, one thread. Chat, Deep Solve, Quiz Generation, Deep Research, Math Animator, Visualize, Guided Learning, and Vision Solver share the same context — start a conversation, escalate to multi-agent problem solving, generate quizzes, visualize data, animate math, and deep-dive into research, all without losing a single message.
-- **Personal TutorBots** — Not chatbots — autonomous tutors. Each TutorBot lives in its own workspace with its own memory, personality, and skill set. They set reminders, learn new abilities, and evolve as you grow. Connect over 11 channels: Telegram, WhatsApp, Discord, Slack, Feishu, WeChat Work, DingTalk, Matrix, Email, QQ, and MoChat. Powered by [nanobot](https://github.com/HKUDS/nanobot).
-- **AI Co-Writer** — A Markdown editor where AI is a first-class collaborator. Select text, rewrite, expand, or summarize — drawing from your knowledge base and the web. Every piece feeds back into your learning ecosystem.
-- **Guided Learning** — Turn your materials into structured, visual learning journeys. DeepTutor designs multi-step plans, generates interactive HTML pages for each knowledge point, and lets you discuss alongside each step.
-- **Math Animator** — Turn mathematical concepts into visual animations and storyboards. Five-stage pipeline: concept analysis → scene design → Manim code generation → render → summary. Supports video (.mp4) and image (.png) output modes with automatic retry on render failure.
-- **Data Visualizer** — Generate charts and diagrams from your data or conversation context. Powered by Chart.js and SVG with support for bar, line, pie, scatter, and custom diagram types — rendered inline in your conversation.
-- **Vision Solver** — Analyze math problem images and generate GeoGebra visualizations. Upload an image with a question; DeepTutor extracts geometry, parses coordinate systems, validates GeoGebra commands, and returns an interactive visualization.
-- **Composable Tool Layer** — Seven built-in tools (RAG retrieval, web search, sandboxed code execution, deep reasoning, brainstorming, academic paper search, vision parsing) that work across every mode. Enable exactly the tools you need per turn — no forced bundles.
-- **Knowledge Hub** — Upload PDFs, Markdown, and text files to build RAG-ready knowledge bases. Multi-format pipeline: parse → chunk → embed → index. Organize insights across sessions in color-coded notebooks. Your documents don't just sit there — they actively power every conversation.
-- **Persistent Memory** — DeepTutor builds a living profile of you: what you've studied, how you learn, and where you're heading. Two-layer memory (PROFILE.md + SUMMARY.md) shared across all features and TutorBots, getting sharper with every interaction.
-- **Agent-Native CLI** — Every capability, knowledge base, session, and TutorBot is one command away. Rich terminal output for humans, structured JSON for AI agents and pipelines. Hand DeepTutor a [`SKILL.md`](SKILL.md) and your agents can operate it autonomously.
-- **30+ LLM Providers** — Native OpenAI and Anthropic SDKs plus a routing layer for DashScope, DeepSeek, Gemini, Ollama, Groq, Azure OpenAI, and many more. Per-model capability flags: vision, JSON mode, prompt caching, reasoning (o1/o3/o4), temperature overrides. Switch providers without changing code.
-- **Multi-Language Support** — Interface and responses in English, Chinese (Simplified), Japanese, Spanish, French, Arabic, Russian, Hindi, and Portuguese.
-- **Real-Time Streaming** — WebSocket-based streaming with structured `StreamEvent` frames. Watch thinking, tool calls, progress stages, and final content appear live — no polling required.
-- **Full Observability** — Every LLM call logs provider, model, tokens, cost, and latency. Query context traces each call back to the exact agent, stage, and capability that triggered it.
+DeepTutor is designed for **early childhood education** — toddlers ages 1–5 learn best through visuals, stories, play, and repetition. Every feature below maps to how young children actually learn.
+
+### 🧒 For Toddlers — Direct Learning Experiences
+
+- **Animated Learning** — Letters forming, numbers counting, shapes dancing — the Math Animator turns abstract concepts into short videos toddlers can watch and rewatch. A five-stage pipeline (concept → design → Manim code → render → narration) produces `.mp4` or `.png` sequences. Ideal for ABCs, 123s, colors, and basic phonics.
+- **Step-by-Step Visual Journeys** — Guided Learning breaks any topic (colors, animals, the alphabet) into 3–5 progressive knowledge points, each as a rich interactive HTML page with pictures, diagrams, and examples sized for short attention spans. Toddlers can pause and resume exactly where they left off.
+- **Storytime & Rhymes** — Chat mode generates age-appropriate stories, nursery rhymes, and bedtime tales on demand. Just ask: *"Tell a story about a lost duckling"* or *"Make a counting rhyme about frogs"*.
+- **Drawing Recognition** — Vision Solver reads what a toddler draws or photographs. Upload a picture and ask *"What shape did I draw?"* — DeepTutor identifies it, names it, and extends the learning moment.
+- **Simple Matching Games** — Quiz Generation creates visual matching activities: shape → name, animal → sound, color → object. Built-in duplicate prevention keeps games fresh across sessions.
+- **Picture-Book Learning** — Visualize generates color wheels, animal family charts, shape grids, and counting boards inline in conversation — no separate app needed.
+- **Bilingual Vocabulary** — Responses available in 9 languages (English, Chinese, Japanese, Spanish, French, Arabic, Russian, Hindi, Portuguese). Ideal for multilingual families building parallel vocabulary from day one.
+
+### 👨‍👩‍👧 For Parents & Caregivers — Setup, Monitoring, and Content
+
+- **Personal TutorBot per Child** — Set up a dedicated TutorBot with a warm, patient persona for each child. The bot remembers what the child has covered, adapts to their pace, and proactively sends daily activity reminders via Telegram, WhatsApp, or any of 11 channels. Powered by [nanobot](https://github.com/HKUDS/nanobot).
+- **Daily Routine Scheduling** — The built-in Heartbeat and Cron services let you schedule morning circle time, afternoon practice, and bedtime story prompts — the tutor shows up even when you don't.
+- **Upload Your Materials** — Add any PDF storybook, activity sheet, or curriculum guide to the Knowledge Hub. DeepTutor indexes it (parse → chunk → embed) and draws on it in every conversation, so answers always match the materials you trust.
+- **Progress Memory** — A two-layer memory system (PROFILE.md for the child's learning profile + SUMMARY.md for a searchable history) tracks every topic covered, concept mastered, and gap to revisit. Shared across all features.
+- **Content Creation** — Co-Writer helps parents draft personalized bedtime stories, activity worksheets, or learning plans in Markdown with AI assist — then save them straight to notebooks for reuse.
+- **Sandboxed & Safe** — Code execution runs in a strict sandbox (no filesystem, no network, no subprocess access). Local LLM support via Ollama means the whole system can run offline with no data leaving the house.
+
+### 🏫 For Educators — Curriculum Design & Research
+
+- **Curriculum Authoring** — Guided Learning sessions are fully configurable: upload your own materials, define the knowledge points, set the narrative. Each point generates a standalone HTML page suitable for classroom display.
+- **Research on Child Development** — Deep Research decomposes any topic (e.g., *"phonics methods for 3-year-olds"*) into subtopics, dispatches parallel agents across RAG, web, and academic papers, and produces a cited report in minutes.
+- **Assessment Generation** — Quiz Generation produces structured QA pairs (difficulty level, question type, correct answer) grounded in uploaded curriculum materials. Export as structured JSON for integration into other tools.
+- **Multi-Classroom TutorBots** — Deploy one TutorBot per classroom or learning group, each with its own persona, memory, and channel. The Channel Manager handles allow-from validation so only authorised users can interact.
+- **Activity Notebooks** — Organize generated stories, lesson plans, and research notes into color-coded notebooks. Export to Markdown for printing or sharing.
+
+### ⚙️ Platform Capabilities
+
+- **8 Learning Modes** — Chat · Guided Learning · Math Animator · Visualize · Vision Solver · Quiz Generation · Deep Research · Co-Writer — all sharing one conversation thread.
+- **7 Composable Tools** — RAG retrieval · web search · sandboxed code execution · deep reasoning · brainstorming · paper search · vision parsing. Enable exactly what you need per turn.
+- **30+ LLM Providers** — OpenAI, Anthropic, DeepSeek, Gemini, Ollama (local/offline), Groq, Azure, and more. Per-model capability flags handle vision, JSON mode, prompt caching, and reasoning models automatically.
+- **11 TutorBot Channels** — Telegram · WhatsApp · Discord · Slack · Feishu · WeChat Work · DingTalk · Matrix · Email · QQ · MoChat.
+- **Real-Time Streaming** — WebSocket-based `StreamEvent` frames deliver thinking, tool calls, progress, and content live — no polling.
+- **Full Observability** — Every LLM call logged with provider, model, tokens, cost, latency, and the exact agent/stage/capability that triggered it.
+- **Agent-Native CLI** — Every capability accessible from the terminal. Structured JSON output for pipelines and automation.
 
 ---
 
