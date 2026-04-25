@@ -1,16 +1,44 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Eye, RotateCcw } from "lucide-react";
+import {
+  Bookmark,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Eye,
+  FolderPlus,
+  Loader2,
+  Plus,
+  RotateCcw,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import MarkdownRenderer from "@/components/common/MarkdownRenderer";
 import QuestionFollowupPanel, {
   type FollowupThreadState,
 } from "@/components/quiz/QuestionFollowupPanel";
+import {
+  isChoiceQuizQuestion,
+  resolveChoiceAnswerKey,
+} from "@/lib/quiz-question-type";
 import { buildQuizFollowupConfig, type QuizQuestion } from "@/lib/quiz-types";
+import {
+  addEntryToCategory,
+  createCategory,
+  listCategories,
+  lookupNotebookEntry,
+  updateNotebookEntry,
+  upsertNotebookEntry,
+  type NotebookCategory,
+} from "@/lib/notebook-api";
 import { recordQuizResults } from "@/lib/session-api";
 import { shouldAppendEventContent } from "@/lib/stream";
-import { type StartTurnMessage, type StreamEvent, UnifiedWSClient } from "@/lib/unified-ws";
+import {
+  type StartTurnMessage,
+  type StreamEvent,
+  UnifiedWSClient,
+} from "@/lib/unified-ws";
 
 interface QuizViewerProps {
   questions: QuizQuestion[];
@@ -24,7 +52,11 @@ type AnswerState = {
   submitted: boolean;
 };
 
-const EMPTY_ANSWER: AnswerState = { selected: null, typed: "", submitted: false };
+const EMPTY_ANSWER: AnswerState = {
+  selected: null,
+  typed: "",
+  submitted: false,
+};
 
 function createEmptyThreadState(): FollowupThreadState {
   return {
@@ -45,7 +77,7 @@ function getQuestionKey(question: QuizQuestion, index: number): string {
 
 function getUserAnswer(question: QuizQuestion, answer: AnswerState): string {
   if (
-    question.question_type === "choice" &&
+    isChoiceQuizQuestion(question.question_type) &&
     question.options &&
     Object.keys(question.options).length > 0
   ) {
@@ -59,11 +91,13 @@ function isAnswerCorrect(question: QuizQuestion, answer: AnswerState): boolean {
   if (!userAnswer) return false;
   const correct = question.correct_answer.trim();
   const isChoice =
-    question.question_type === "choice" &&
+    isChoiceQuizQuestion(question.question_type) &&
     question.options &&
     Object.keys(question.options).length > 0;
   if (isChoice) {
+    const correctChoiceKey = resolveChoiceAnswerKey(correct, question.options);
     return (
+      userAnswer.toUpperCase() === correctChoiceKey ||
       userAnswer.toUpperCase() === correct.toUpperCase() ||
       userAnswer.toUpperCase() === correct.charAt(0).toUpperCase()
     );
@@ -79,12 +113,23 @@ export default function QuizViewer({
   const { t } = useTranslation();
   const [idx, setIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, AnswerState>>({});
-  const [threads, setThreads] = useState<Record<string, FollowupThreadState>>({});
+  const [threads, setThreads] = useState<Record<string, FollowupThreadState>>(
+    {},
+  );
   const lastReportedSignatureRef = useRef("");
   const threadsRef = useRef<Record<string, FollowupThreadState>>({});
   const threadRunnersRef = useRef<
     Map<string, { questionKey: string; client: UnifiedWSClient }>
   >(new Map());
+
+  const [entryIds, setEntryIds] = useState<Record<string, number>>({});
+  const [bookmarked, setBookmarked] = useState<Record<string, boolean>>({});
+  const [categories, setCategories] = useState<NotebookCategory[]>([]);
+  const [categoryDropdownKey, setCategoryDropdownKey] = useState<string | null>(
+    null,
+  );
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [categoryBusy, setCategoryBusy] = useState(false);
 
   const q = questions[idx];
   const ans = answers[idx] ?? EMPTY_ANSWER;
@@ -92,7 +137,7 @@ export default function QuizViewer({
   const navigationProgress = total > 0 ? ((idx + 1) / total) * 100 : 0;
   const questionKey = q ? getQuestionKey(q, idx) : "";
   const thread = questionKey
-    ? threads[questionKey] ?? createEmptyThreadState()
+    ? (threads[questionKey] ?? createEmptyThreadState())
     : createEmptyThreadState();
   const completedCount = useMemo(
     () => Object.values(answers).filter((answer) => answer.submitted).length,
@@ -121,7 +166,10 @@ export default function QuizViewer({
   );
 
   const updateThread = useCallback(
-    (key: string, updater: (prev: FollowupThreadState) => FollowupThreadState) => {
+    (
+      key: string,
+      updater: (prev: FollowupThreadState) => FollowupThreadState,
+    ) => {
       setThreads((prev) => ({
         ...prev,
         [key]: updater(prev[key] ?? createEmptyThreadState()),
@@ -129,6 +177,114 @@ export default function QuizViewer({
     },
     [],
   );
+
+  // ── Notebook integration ──────────────────────────────────────
+
+  const refreshEntryId = useCallback(
+    async (qKey: string, sId: string, questionIndex?: number) => {
+      try {
+        const entry = await lookupNotebookEntry(sId, qKey);
+        if (entry) {
+          setEntryIds((prev) => ({ ...prev, [qKey]: entry.id }));
+          setBookmarked((prev) => ({ ...prev, [qKey]: entry.bookmarked }));
+          if (questionIndex !== undefined && entry.user_answer) {
+            setAnswers((prev) => {
+              if (prev[questionIndex]?.submitted) return prev;
+              return {
+                ...prev,
+                [questionIndex]: {
+                  selected: entry.user_answer || null,
+                  typed: entry.user_answer || "",
+                  submitted: true,
+                },
+              };
+            });
+          }
+        }
+      } catch {
+        /* entry may not exist yet */
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!sessionId) return;
+    questions.forEach((question, i) => {
+      const key = getQuestionKey(question, i);
+      void refreshEntryId(key, sessionId, i);
+    });
+  }, [sessionId, questions, refreshEntryId]);
+
+  const handleToggleBookmark = useCallback(async () => {
+    if (!q || !sessionId) return;
+    const key = getQuestionKey(q, idx);
+    const eId = entryIds[key];
+    if (!eId) return;
+    const next = !bookmarked[key];
+    setBookmarked((prev) => ({ ...prev, [key]: next }));
+    try {
+      await updateNotebookEntry(eId, { bookmarked: next });
+    } catch {
+      setBookmarked((prev) => ({ ...prev, [key]: !next }));
+    }
+  }, [bookmarked, entryIds, idx, q, sessionId]);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setCategories(await listCategories());
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const handleOpenCategoryDropdown = useCallback(() => {
+    if (!q) return;
+    const key = getQuestionKey(q, idx);
+    if (categoryDropdownKey === key) {
+      setCategoryDropdownKey(null);
+      return;
+    }
+    setCategoryDropdownKey(key);
+    void loadCategories();
+  }, [categoryDropdownKey, idx, loadCategories, q]);
+
+  const handleAddToCategory = useCallback(
+    async (catId: number) => {
+      if (!q) return;
+      const key = getQuestionKey(q, idx);
+      const eId = entryIds[key];
+      if (!eId) return;
+      setCategoryBusy(true);
+      try {
+        await addEntryToCategory(eId, catId);
+        setCategoryDropdownKey(null);
+      } catch {
+        /* ignore */
+      }
+      setCategoryBusy(false);
+    },
+    [entryIds, idx, q],
+  );
+
+  const handleCreateAndAdd = useCallback(async () => {
+    if (!q || !newCategoryName.trim()) return;
+    const key = getQuestionKey(q, idx);
+    const eId = entryIds[key];
+    if (!eId) return;
+    setCategoryBusy(true);
+    try {
+      const cat = await createCategory(newCategoryName.trim());
+      await addEntryToCategory(eId, cat.id);
+      setNewCategoryName("");
+      setCategoryDropdownKey(null);
+    } catch {
+      /* ignore */
+    }
+    setCategoryBusy(false);
+  }, [entryIds, idx, newCategoryName, q]);
+
+  // ── Follow-up thread event handling ───────────────────────────
 
   const handleThreadEvent = useCallback(
     (key: string, event: StreamEvent) => {
@@ -147,6 +303,12 @@ export default function QuizViewer({
         }));
         const runner = threadRunnersRef.current.get(key);
         if (runner) runner.questionKey = nextSessionId;
+        const eId = entryIds[key];
+        if (eId) {
+          void updateNotebookEntry(eId, {
+            followup_session_id: nextSessionId,
+          }).catch(() => {});
+        }
         return;
       }
 
@@ -164,7 +326,10 @@ export default function QuizViewer({
       }
 
       updateThread(key, (prev) => {
-        const next = { ...prev, activeTurnId: event.turn_id || prev.activeTurnId };
+        const next = {
+          ...prev,
+          activeTurnId: event.turn_id || prev.activeTurnId,
+        };
         if (event.type === "stage_start") {
           next.currentStage = event.stage;
           return next;
@@ -176,7 +341,8 @@ export default function QuizViewer({
         if (event.type === "error") {
           next.error = event.content || prev.error;
           const terminal = Boolean(
-            ((event.metadata ?? {}) as { turn_terminal?: boolean }).turn_terminal,
+            ((event.metadata ?? {}) as { turn_terminal?: boolean })
+              .turn_terminal,
           );
           if (terminal) {
             next.isStreaming = false;
@@ -201,7 +367,7 @@ export default function QuizViewer({
         return next;
       });
     },
-    [updateThread],
+    [entryIds, updateThread],
   );
 
   const ensureThreadRunner = useCallback(
@@ -223,7 +389,9 @@ export default function QuizViewer({
                 isStreaming: false,
                 currentStage: "",
                 activeTurnId: null,
-                error: prev.error || "Follow-up chat failed because the connection closed.",
+                error:
+                  prev.error ||
+                  "Follow-up chat failed because the connection closed.",
               }));
             }
           },
@@ -265,7 +433,9 @@ export default function QuizViewer({
   );
 
   const isChoice =
-    q?.question_type === "choice" && q.options && Object.keys(q.options).length > 0;
+    isChoiceQuizQuestion(q?.question_type) &&
+    q.options &&
+    Object.keys(q.options).length > 0;
   const currentUserAnswer = q ? getUserAnswer(q, ans) : "";
 
   const isCorrect = useMemo(() => {
@@ -282,8 +452,12 @@ export default function QuizViewer({
           {
             question_id: question.question_id,
             question: question.question,
+            question_type: question.question_type,
+            options: question.options ?? {},
             user_answer: getUserAnswer(question, answer),
             correct_answer: question.correct_answer,
+            explanation: question.explanation ?? "",
+            difficulty: question.difficulty ?? "",
             is_correct: isAnswerCorrect(question, answer),
           },
         ];
@@ -296,17 +470,58 @@ export default function QuizViewer({
     const signature = JSON.stringify(submittedResults);
     if (!signature || signature === lastReportedSignatureRef.current) return;
     lastReportedSignatureRef.current = signature;
-    void recordQuizResults(sessionId, submittedResults).catch((error) => {
-      console.error("Failed to record quiz results:", error);
-      if (lastReportedSignatureRef.current === signature) {
-        lastReportedSignatureRef.current = "";
+    void recordQuizResults(sessionId, submittedResults)
+      .then(() => {
+        questions.forEach((question, i) => {
+          void refreshEntryId(getQuestionKey(question, i), sessionId);
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to record quiz results:", error);
+        if (lastReportedSignatureRef.current === signature) {
+          lastReportedSignatureRef.current = "";
+        }
+      });
+  }, [
+    completedCount,
+    questions,
+    refreshEntryId,
+    sessionId,
+    submittedResults,
+    total,
+  ]);
+
+  const upsertSingleQuestion = useCallback(
+    async (question: QuizQuestion, answer: AnswerState) => {
+      if (!sessionId) return;
+      const key = getQuestionKey(question, questions.indexOf(question));
+      try {
+        const entry = await upsertNotebookEntry({
+          session_id: sessionId,
+          question_id: question.question_id,
+          question: question.question,
+          question_type: question.question_type,
+          options: question.options ?? {},
+          correct_answer: question.correct_answer,
+          explanation: question.explanation ?? "",
+          difficulty: question.difficulty ?? "",
+          user_answer: getUserAnswer(question, answer),
+          is_correct: isAnswerCorrect(question, answer),
+        });
+        setEntryIds((prev) => ({ ...prev, [key]: entry.id }));
+        setBookmarked((prev) => ({ ...prev, [key]: entry.bookmarked }));
+      } catch {
+        /* best-effort */
       }
-    });
-  }, [completedCount, sessionId, submittedResults, total]);
+    },
+    [questions, sessionId],
+  );
 
   const handleSubmit = () => {
-    if (ans.submitted) return;
+    if (ans.submitted || !q) return;
+    const newAnswer = { ...(answers[idx] ?? EMPTY_ANSWER), submitted: true };
     updateAnswer({ submitted: true });
+    void upsertSingleQuestion(q, newAnswer);
   };
 
   const handleReset = () => {
@@ -363,9 +578,21 @@ export default function QuizViewer({
       language,
       config: followupConfig,
     });
-  }, [answers, idx, language, q, sendThroughThreadRunner, sessionId, updateThread]);
+  }, [
+    answers,
+    idx,
+    language,
+    q,
+    sendThroughThreadRunner,
+    sessionId,
+    updateThread,
+  ]);
 
   if (!q) return null;
+
+  const currentEntryId = entryIds[questionKey];
+  const currentBookmarked = bookmarked[questionKey] ?? false;
+  const showCategoryDropdown = categoryDropdownKey === questionKey;
 
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)]">
@@ -383,7 +610,8 @@ export default function QuizViewer({
                 threads[getQuestionKey(question, questionIndex)]?.sessionId,
               ) ||
               Boolean(
-                threads[getQuestionKey(question, questionIndex)]?.messages.length,
+                threads[getQuestionKey(question, questionIndex)]?.messages
+                  .length,
               );
             return (
               <button
@@ -416,26 +644,100 @@ export default function QuizViewer({
       </div>
 
       <div className="px-4 py-3">
-        <div className="mb-2 flex flex-wrap items-center gap-1.5">
-          <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--muted-foreground)]">
-            Q{idx + 1}
-          </span>
-          {q.difficulty && (
-            <span
-              className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase ${
-                q.difficulty === "hard"
-                  ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
-                  : q.difficulty === "medium"
-                    ? "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
-                    : "bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400"
-              }`}
-            >
-              {q.difficulty}
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-[10px] font-medium uppercase text-[var(--muted-foreground)]">
+              Q{idx + 1}
             </span>
+            {q.difficulty && (
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase ${
+                  q.difficulty === "hard"
+                    ? "bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400"
+                    : q.difficulty === "medium"
+                      ? "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400"
+                      : "bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400"
+                }`}
+              >
+                {q.difficulty}
+              </span>
+            )}
+            <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">
+              {q.question_type}
+            </span>
+          </div>
+
+          {ans.submitted && (
+            <div className="relative flex items-center gap-1">
+              <button
+                onClick={handleToggleBookmark}
+                disabled={!currentEntryId}
+                title={currentBookmarked ? t("Remove Bookmark") : t("Bookmark")}
+                className={`rounded-lg p-1.5 transition-all disabled:opacity-30 ${
+                  currentBookmarked
+                    ? "scale-110 text-amber-500 dark:text-amber-400"
+                    : "text-[var(--muted-foreground)] hover:text-amber-500 dark:hover:text-amber-400"
+                }`}
+              >
+                <Bookmark
+                  size={18}
+                  strokeWidth={currentBookmarked ? 2.5 : 1.8}
+                  fill={currentBookmarked ? "currentColor" : "none"}
+                />
+              </button>
+              <button
+                onClick={handleOpenCategoryDropdown}
+                disabled={!currentEntryId}
+                title={t("Add to Category")}
+                className="rounded-lg p-1.5 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] disabled:opacity-30"
+              >
+                <FolderPlus size={16} />
+              </button>
+
+              {showCategoryDropdown && (
+                <div className="absolute right-0 top-8 z-20 w-48 rounded-lg border border-[var(--border)] bg-[var(--card)] py-1 shadow-lg">
+                  {categories.length > 0 && (
+                    <div className="max-h-[160px] overflow-y-auto">
+                      {categories.map((cat) => (
+                        <button
+                          key={cat.id}
+                          disabled={categoryBusy}
+                          onClick={() => void handleAddToCategory(cat.id)}
+                          className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[12px] text-[var(--foreground)] transition-colors hover:bg-[var(--muted)] disabled:opacity-40"
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="border-t border-[var(--border)] px-2 py-1.5">
+                    <div className="flex items-center gap-1">
+                      <input
+                        value={newCategoryName}
+                        onChange={(e) => setNewCategoryName(e.target.value)}
+                        onKeyDown={(e) =>
+                          e.key === "Enter" && void handleCreateAndAdd()
+                        }
+                        placeholder={t("New category...")}
+                        className="flex-1 rounded border border-[var(--border)] bg-[var(--background)] px-2 py-1 text-[11px] text-[var(--foreground)] outline-none placeholder:text-[var(--muted-foreground)]"
+                      />
+                      <button
+                        disabled={!newCategoryName.trim() || categoryBusy}
+                        onClick={() => void handleCreateAndAdd()}
+                        className="rounded p-1 text-[var(--primary)] disabled:opacity-30"
+                      >
+                        {categoryBusy ? (
+                          <Loader2 size={12} className="animate-spin" />
+                        ) : (
+                          <Plus size={12} />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-          <span className="rounded-md bg-[var(--muted)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--muted-foreground)]">
-            {q.question_type}
-          </span>
         </div>
 
         <div className="mb-3 text-[14px] leading-relaxed">
@@ -450,7 +752,10 @@ export default function QuizViewer({
           <div className="space-y-1.5">
             {Object.entries(q.options!).map(([key, text]) => {
               const isSelected = ans.selected === key;
-              const correctKey = q.correct_answer.trim().charAt(0).toUpperCase();
+              const correctKey = q.correct_answer
+                .trim()
+                .charAt(0)
+                .toUpperCase();
               const isCorrectOption = key.toUpperCase() === correctKey;
               const showFeedback = ans.submitted;
 
@@ -486,7 +791,11 @@ export default function QuizViewer({
                             : "border-[var(--border)] text-[var(--muted-foreground)]"
                     }`}
                   >
-                    {showFeedback && isCorrectOption ? <Check size={11} /> : key}
+                    {showFeedback && isCorrectOption ? (
+                      <Check size={11} />
+                    ) : (
+                      key
+                    )}
                   </span>
                   <span className="leading-relaxed">{text}</span>
                 </button>
@@ -501,7 +810,9 @@ export default function QuizViewer({
               disabled={ans.submitted}
               rows={3}
               placeholder={
-                q.question_type === "coding" ? t("Write your code here...") : t("Type your answer...")
+                q.question_type === "coding"
+                  ? t("Write your code here...")
+                  : t("Type your answer...")
               }
               className={`w-full resize-none rounded-lg border px-3 py-2 text-[13px] outline-none transition-colors placeholder:text-[var(--muted-foreground)] ${
                 ans.submitted
@@ -554,7 +865,15 @@ export default function QuizViewer({
                   {t("Reference Answer")}
                 </div>
                 <div className="text-[13px] leading-relaxed text-[var(--foreground)]">
-                  <MarkdownRenderer content={q.correct_answer} variant="prose" />
+                  <MarkdownRenderer
+                    content={
+                      q.question_type === "coding" &&
+                      !q.correct_answer.trimStart().startsWith("```")
+                        ? `\`\`\`python\n${q.correct_answer}\n\`\`\``
+                        : q.correct_answer
+                    }
+                    variant="prose"
+                  />
                 </div>
               </div>
             )}
